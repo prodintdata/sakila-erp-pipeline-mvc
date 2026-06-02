@@ -58,22 +58,17 @@ GROUP BY s.store_id;
 
 SELECT 
     f.film_id AS 'ID Artículo',
-    f.title AS 'Descripción del Producto',
-    
+    f.title AS 'Descripción del Producto',    
     -- NUMERADOR: Total de despachos / salidas logísticas en el histórico
-    COUNT(r.rental_id) AS 'Total Despachos (Rentas)',
-    
+    COUNT(r.rental_id) AS 'Total Despachos (Rentas)',    
     -- DENOMINADOR: Stock total de copias asignadas en inventario
-    COUNT(DISTINCT i.inventory_id) AS 'Inventario Disponible (Unidades)',
-    
+    COUNT(DISTINCT i.inventory_id) AS 'Inventario Disponible (Unidades)',    
     -- CÁLCULO DEL ÍNDICE DE ROTACIÓN (Flujo Total / Stock)
     -- Usamos ROUND y NULLIF para evitar divisiones entre cero si un artículo no tiene stock
     ROUND(
         COUNT(r.rental_id) / NULLIF(COUNT(DISTINCT i.inventory_id), 0), 
         2
-    ) AS 'Índice Rotación Inventario (IRI)',
-    
-    
+    ) AS 'Índice Rotación Inventario (IRI)',   
     -- DIAGNÓSTICO LOGÍSTICO (Análisis de Criticidad de Almacén)
     CASE 
         WHEN COUNT(r.rental_id) = 0 THEN 'MERMA / STOCK CRÍTICO INACTIVO'
@@ -85,7 +80,6 @@ SELECT
 -- LEFT JOIN para no dejar fuera los artículos con CERO rentas (mermas u obsolescencia)
 LEFT JOIN inventory i ON f.film_id = i.film_id
 LEFT JOIN rental r ON i.inventory_id = r.inventory_id
-
 GROUP BY f.film_id, f.title
 ORDER BY f.film_id ASC;
 
@@ -94,13 +88,11 @@ ORDER BY f.film_id ASC;
 SELECT 
     f.film_id AS 'ID Artículo',
     f.title AS 'Descripción del Producto',
-    
-      
     -- Días promedio que pasa el activo en estante antes de rotar
     ROUND(
         365 / NULLIF((COUNT(r.rental_id) / NULLIF(COUNT(DISTINCT i.inventory_id), 0)), 0), 
         1
-    ) AS 'Días de Cobertura (DSI)'
+    ) AS 'Días Promedio Antes de Rotar'
     
 FROM film f
 -- LEFT JOIN para no dejar fuera los artículos con CERO rentas (mermas u obsolescencia)
