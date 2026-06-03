@@ -3,8 +3,14 @@ import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
 
+# Detectar la ruta de la carpeta del Script
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# Llegar a la carpeta raíz del proyecto (un nivel arriba) para encontrar archivo .env
+dotenv_path = os.path.join(BASE_DIR, "..", ".env")
+
 # Cargar las variables de entorno desde el archivo oculto .env
-load_dotenv()
+load_dotenv(dotenv_path=dotenv_path)
 
 def get_connection():
     """Establece y retorna la conexion fisica con la base de datos Sakila local de forma segura."""
