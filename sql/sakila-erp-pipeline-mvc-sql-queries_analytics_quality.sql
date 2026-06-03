@@ -179,6 +179,18 @@ ADD CONSTRAINT chk_payment_amount CHECK (amount >= 0.00);
 ALTER TABLE rental 
 ADD CONSTRAINT chk_rental_dates CHECK (return_date >= rental_date);
 
+-- Forzar unicidad en Country: Evita duplicar nombres de países maestros
+ALTER TABLE country 
+ADD CONSTRAINT uq_country_name UNIQUE (country);
+
+-- Forzar unicidad en City: Evita registrar la misma ciudad dos veces en el mismo país
+ALTER TABLE city 
+ADD CONSTRAINT uq_city_per_country UNIQUE (city, country_id);
+
+-- Forzar unicidad en Film: Evita duplicar el código SKU o título exacto de la película
+ALTER TABLE film 
+ADD CONSTRAINT uq_film_title UNIQUE (title);
+
 -- SCRIPTS para prueba del funcionamiento de las restricciones
 
 -- Debe fallar por violación de chk_film_rental_rate
