@@ -236,6 +236,67 @@ WHERE rental_id = 1;
 INSERT INTO film (title, language_id, rental_duration, rental_rate, replacement_cost, length) 
 VALUES ('PROCESO CONTROLADO OK', 1, 5, 4.99, 15.00, 95);
 
+SELECT *
+FROM country;
+
+
+-- Crear la tabla unificada 
+CREATE TABLE denormalized_customer_rentals (
+    rental_id INT,
+    customer_id INT,
+    customer_name VARCHAR(100),
+    store_id INT,
+    store_name VARCHAR(150),
+    store_address VARCHAR(100),
+    store_city VARCHAR(50),
+    store_country VARCHAR(50),
+    staff_name VARCHAR(100),
+    film_id INT,
+    film_title VARCHAR(255),
+    rental_date DATETIME,
+    return_date DATETIME,
+    amount_paid DECIMAL(5,2),  -- El monto real registrado
+    payment_date DATETIME,     -- La fecha real del pago (¡Nueva!)
+    replacement_cost DECIMAL(5,2),
+    PRIMARY KEY (rental_id)
+);
+
+--  Carga Masiva y Desnormalización mediante JOINs Cruzados
+INSERT INTO denormalized_customer_rentals
+SELECT 
+    r.rental_id,
+    c.customer_id,
+    CONCAT(c.first_name, ' ', c.last_name) AS customer_name,
+    i.store_id,
+    CONCAT('Tienda ', s.store_id, ' - ', ci_store.city) AS store_name,
+    a_store.address AS store_address,
+    ci_store.city AS store_city,
+    co_store.country AS store_country,
+    CONCAT(st.first_name, ' ', st.last_name) AS staff_name,
+    f.film_id,
+    f.title AS film_title,
+    r.rental_date,
+    r.return_date,
+    p.amount AS amount_paid,     
+    p.payment_date,             
+    f.replacement_cost
+FROM rental r
+INNER JOIN customer c ON r.customer_id = c.customer_id
+INNER JOIN inventory i ON r.inventory_id = i.inventory_id
+INNER JOIN film f ON i.film_id = f.film_id
+INNER JOIN staff st ON r.staff_id = st.staff_id
+INNER JOIN store s ON i.store_id = s.store_id
+INNER JOIN address a_store ON s.address_id = a_store.address_id
+INNER JOIN city ci_store ON a_store.city_id = ci_store.city_id
+INNER JOIN country co_store ON ci_store.country_id = co_store.country_id
+-- LEFT JOIN por si existen rentas que se pagaron después o están pendientes
+LEFT JOIN payment p ON r.rental_id = p.rental_id;
+
+-- Verificar que los datos cargaron exitosamente
+SELECT * FROM denormalized_customer_rentals 
+LIMIT 10;
+
+
 
 
 
