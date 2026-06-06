@@ -240,6 +240,16 @@ SELECT *
 FROM country;
 
 
+-- Creo tabla de prueba para ingresar datos desde un csv, sin alterar la base de datos actual
+CREATE TABLE IF NOT EXISTS tabla_prueba_clientes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_auditoria VARCHAR(100)
+);
+
+SELECT *
+FROM tabla_prueba_clientes
+
+
 -- Crear la tabla unificada 
 CREATE TABLE denormalized_customer_rentals (
     rental_id INT,
@@ -295,7 +305,6 @@ LEFT JOIN payment p ON r.rental_id = p.rental_id;
 -- Verificar que los datos cargaron exitosamente
 SELECT * FROM denormalized_customer_rentals 
 LIMIT 10;
-
 
 
 

@@ -130,12 +130,63 @@ def import_table_from_json(json_filename, table_name, column_name):
         print(f"Importación Completada: Se insertaron {cursor.rowcount} registros en la tabla '{table_name}' desde JSON.")
         return True
     except Exception as e:
-        print(f"Error al importar masivamente a la tabla '{table_name}': {e}")
+        print(f"Error al importar masivamente a la tabla '{table_name}' desde JSON: {e}")
     finally:
         if 'cursor' in locals() and cursor is not None:
             cursor.close()
         conn.close()
     return False
+
+
+def import_table_from_csv(csv_filename, table_name, column_name):
+    """
+    Lee un archivo CSV de forma genérica e inserta sus datos de forma masiva 
+    en la tabla y columna indicadas por parámetros.
+    Soporta configuraciones regionales de Excel (comas, punto y coma y caracteres BOM).
+    """
+    conn = get_connection()
+    if not conn: return False
+    
+    try:
+        # 1. 'utf-8-sig' elimina automáticamente el carácter oculto BOM (\ufeff) de Excel
+        with open(csv_filename, mode='r', encoding='utf-8-sig') as file:
+            
+            # 2. Detectar dinámicamente si el separador es coma (,) o punto y coma (;)
+            primera_linea = file.readline()
+            separador = ';' if ';' in primera_linea else ','
+            
+            # 3. Rebobinar el archivo al inicio para que el DictReader lo lea completo
+            file.seek(0)
+            
+            reader = csv.DictReader(file, delimiter=separador)
+            
+            # 4. Limpiar espacios en blanco accidentales en las cabeceras
+            if reader.fieldnames:
+                reader.fieldnames = [name.strip() for name in reader.fieldnames]
+            
+            # Mapeo genérico leyendo la columna destino fila por fila desde el CSV
+            data_to_insert = [(row[column_name].strip(),) for row in reader if column_name in row]
+            
+        if not data_to_insert:
+            print(f"Error: No se encontraron campos con la columna '{column_name}' en el archivo CSV.")
+            if reader.fieldnames:
+                print(f"Python detectó estas columnas reales en tu archivo: {reader.fieldnames}")
+            return False
+            
+        cursor = conn.cursor()
+        query = f"INSERT INTO {table_name} ({column_name}) VALUES (%s)"
+        
+        cursor.executemany(query, data_to_insert)
+        conn.commit()
+        print(f"Importación Completada: Se insertaron {cursor.rowcount} registros en la tabla '{table_name}' desde CSV.")
+        return True
+    except Exception as e:
+        print(f"Error al importar masivamente a la tabla '{table_name}' desde CSV: {e}")
+        return False
+    finally:
+        if 'cursor' in locals() and cursor is not None:
+            cursor.close()
+        conn.close()
 
 # =====================================================================
 # INTERFAZ DE USUARIO INTERACTIVA EN CONSOLA (Poka-Yoke / Anti-Errores)
@@ -162,31 +213,53 @@ if __name__ == "__main__":
         
     # 3. Menú interactivo de Importación Genérica desde JSON (Con Selección Numérica)
     print("\n--- PASO 3: IMPORTACIÓN MASIVA DESDE JSON ---")
-    ejecutar_import = input("¿Desea realizar una prueba de importación masiva desde un archivo JSON? (s/n): ").strip().lower()
+    ejecutar_import_json = input("¿Desea realizar una prueba de importación masiva desde un archivo JSON? (s/n): ").strip().lower()
     
-    if ejecutar_import == 's':
+    if ejecutar_import_json == 's':
         archivo_imp = input("Ingrese la ruta del archivo JSON a importar (ej. data/countries_to_import.json): ").strip()
         tabla_imp = input("¿A qué tabla de la base de datos se van a ingresar los datos? (ej. country, city): ").strip().lower()
         
-        # Obtenemos dinámicamente las columnas reales de la tabla destino
         columnas_disponibles = get_table_columns(tabla_imp)
         
         if columnas_disponibles:
             print(f"\n Columnas disponibles en la tabla '{tabla_imp}':")
-            # Enumeramos cada columna partiendo desde el índice 1
             for idx, col in enumerate(columnas_disponibles, start=1):
                 print(f"  [{idx}] -> {col}")
                 
             try:
                 seleccion = int(input(f"\nSeleccione el número de la columna destino (1-{len(columnas_disponibles)}): "))
-                
-                # Validamos que el número ingresado esté en el rango correcto
                 if 1 <= seleccion <= len(columnas_disponibles):
                     columna_final = columnas_disponibles[seleccion - 1]
-                    print(f"✔️ Selección validada: Se utilizará la columna '{columna_final}'")
-                    
-                    # Ejecutamos la importación con los datos validados
+                    print(f"Selección validada: Se utilizará la columna '{columna_final}'")
                     import_table_from_json(archivo_imp, tabla_imp, columna_final)
+                else:
+                    print("Error: El número ingresado está fuera del rango de opciones.")
+            except ValueError:
+                print("Error: Debe ingresar un número entero válido.")
+        else:
+            print(f"No se pudieron recuperar columnas. Verifique que la tabla '{tabla_imp}' exista.")
+
+    # 4. Menú interactivo de Importación Genérica desde CSV (Con Selección Numérica)
+    print("\n--- PASO 4: IMPORTACIÓN MASIVA DESDE CSV ---")
+    ejecutar_import_csv = input("¿Desea realizar una prueba de importación masiva desde un archivo CSV? (s/n): ").strip().lower()
+    
+    if ejecutar_import_csv == 's':
+        archivo_imp = input("Ingrese la ruta del archivo CSV a importar (ej. data/countries_to_import.csv): ").strip()
+        tabla_imp = input("¿A qué tabla de la base de datos se van a ingresar los datos? (ej. country, city): ").strip().lower()
+        
+        columnas_disponibles = get_table_columns(tabla_imp)
+        
+        if columnas_disponibles:
+            print(f"\n Columnas disponibles en la tabla '{tabla_imp}':")
+            for idx, col in enumerate(columnas_disponibles, start=1):
+                print(f"  [{idx}] -> {col}")
+                
+            try:
+                seleccion = int(input(f"\nSeleccione el número de la columna destino (1-{len(columnas_disponibles)}): "))
+                if 1 <= seleccion <= len(columnas_disponibles):
+                    columna_final = columnas_disponibles[seleccion - 1]
+                    print(f"Selección validada: Se utilizará la columna '{columna_final}'")
+                    import_table_from_csv(archivo_imp, tabla_imp, columna_final)
                 else:
                     print("Error: El número ingresado está fuera del rango de opciones.")
             except ValueError:
