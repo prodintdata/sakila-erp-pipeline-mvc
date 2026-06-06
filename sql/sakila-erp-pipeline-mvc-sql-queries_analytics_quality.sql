@@ -266,7 +266,7 @@ CREATE TABLE denormalized_customer_rentals (
     rental_date DATETIME,
     return_date DATETIME,
     amount_paid DECIMAL(5,2),  -- El monto real registrado
-    payment_date DATETIME,     -- La fecha real del pago (¡Nueva!)
+    payment_date DATETIME,     -- La fecha real del pago
     replacement_cost DECIMAL(5,2),
     PRIMARY KEY (rental_id)
 );
